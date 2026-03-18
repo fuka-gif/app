@@ -1,1 +1,148 @@
-a
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>イケメンガチャ（ボイス付き）</title>
+<style>
+body {
+    margin: 0;
+    font-family: sans-serif;
+    text-align: center;
+    background: radial-gradient(circle, #2a2a4a, #0d0d1a);
+    color: white;
+}
+
+h1 { margin: 20px; }
+
+button {
+    padding: 15px 30px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: none;
+    background: gold;
+    cursor: pointer;
+}
+
+button:hover { background: orange; }
+
+#card {
+    width: 220px;
+    height: 300px;
+    margin: 30px auto;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(255,255,255,0.2);
+}
+
+#card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#result {
+    font-size: 22px;
+    margin-top: 20px;
+}
+
+.rare {
+    color: gold;
+    animation: glow 1s infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 10px gold; }
+    to { text-shadow: 0 0 30px yellow; }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+}
+</style>
+</head>
+<body>
+
+<h1>✨イケメンガチャ✨</h1>
+<button onclick="drawGacha()">ガチャを引く</button>
+
+<div id="card">
+    <img id="cardImg" src="https://picsum.photos/200/300?random=1">
+</div>
+
+<div id="result">ボタンを押してガチャを引こう！</div>
+
+<script>
+const characters = [
+    {name:"👼 天使のイケメン", img:"https://picsum.photos/200/300?random=11", rare:true, voice:"君に出会うために舞い降りたよ"},
+    {name:"😈 悪魔のイケメン", img:"https://picsum.photos/200/300?random=12", rare:true, voice:"契約する？…俺と"},
+    {name:"🧙 仙人のイケメン", img:"https://picsum.photos/200/300?random=13", rare:true, voice:"運命とは面白いものじゃのう"},
+
+    {name:"⚔️ 剣士イケメン", img:"https://picsum.photos/200/300?random=2", voice:"守ってみせる"},
+    {name:"🎸 バンドマン", img:"https://picsum.photos/200/300?random=3", voice:"俺の音、聴いてく？"},
+    {name:"📚 メガネ男子", img:"https://picsum.photos/200/300?random=4", voice:"興味深いね"},
+    {name:"🏀 スポーツ男子", img:"https://picsum.photos/200/300?random=5", voice:"一緒に走ろうぜ！"},
+    {name:"🌸 幼なじみ", img:"https://picsum.photos/200/300?random=6", voice:"ずっと一緒だよな？"},
+    {name:"👔 エリート", img:"https://picsum.photos/200/300?random=7", voice:"計画通りだ"},
+    {name:"🕶️ ミステリアス", img:"https://picsum.photos/200/300?random=8", voice:"…面白い"}
+];
+
+function speak(text) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "ja-JP";
+    utter.rate = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+}
+
+function drawGacha() {
+    const card = document.getElementById("card");
+    const img = document.getElementById("cardImg");
+    const result = document.getElementById("result");
+
+    result.innerHTML = "・・・ガチャ中・・・";
+    card.classList.add("spin");
+
+    let count = 0;
+    const interval = setInterval(() => {
+        img.src = "https://picsum.photos/200/300?random=" + Math.floor(Math.random()*100);
+        count++;
+        if(count > 10){
+            clearInterval(interval);
+            reveal();
+        }
+    }, 100);
+
+    function reveal() {
+        card.classList.remove("spin");
+
+        const rand = Math.random() * 100;
+        let selected;
+
+        if (rand < 1) selected = characters[0];
+        else if (rand < 2) selected = characters[1];
+        else if (rand < 3) selected = characters[2];
+        else selected = characters[3 + Math.floor(Math.random()*7)];
+
+        img.src = selected.img;
+
+        if (selected.rare) {
+            result.innerHTML = "🌟大当たり！🌟<br>" + selected.name;
+            result.className = "rare";
+        } else {
+            result.innerHTML = selected.name;
+            result.className = "";
+        }
+
+        // ボイス再生
+        speak(selected.voice);
+    }
+}
+</script>
+
+</body>
+</html>
