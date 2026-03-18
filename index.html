@@ -2,90 +2,148 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>戦国恋愛絵巻AI版</title>
+<title>戦国恋愛絵巻 -乙女編-</title>
+
 <style>
 body {
-  margin: 0;
-  font-family: serif;
-  background: url("https://images.unsplash.com/photo-1549880338-65ddcdfd017b") no-repeat center/cover;
-  color: white;
-}
-#game {
-  background: rgba(0,0,0,0.7);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-#character img { height: 320px; }
-#text { padding: 20px; font-size: 18px; }
-button {
-  display:block;
-  width:90%;
-  margin:10px auto;
-  padding:10px;
-  background:#6b2c2c;
+  margin:0;
+  background:url("https://images.unsplash.com/photo-1524492412937-b28074a5d7da") no-repeat center/cover;
+  font-family: "Hiragino Mincho ProN", serif;
   color:white;
+}
+
+/* 全体 */
+#game {
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  background:rgba(0,0,0,0.4);
+}
+
+/* 立ち絵 */
+#character {
+  position:absolute;
+  bottom:120px;
+  left:50%;
+  transform:translateX(-50%);
+}
+#character img {
+  height:400px;
+  transition:0.5s;
+}
+
+/* テキストウィンドウ */
+#ui {
+  background:rgba(0,0,0,0.7);
+  padding:15px;
+}
+
+#name {
+  font-size:20px;
+  color:#ffcccb;
+}
+
+#text {
+  font-size:18px;
+  margin-top:5px;
+}
+
+/* 選択肢 */
+button {
+  width:100%;
+  margin-top:8px;
+  padding:10px;
+  background:#8b3a3a;
   border:none;
+  color:white;
+  cursor:pointer;
+}
+button:hover {
+  background:#b04a4a;
+}
+
+/* 好感度 */
+#love {
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:rgba(0,0,0,0.6);
+  padding:5px 10px;
 }
 </style>
 </head>
+
 <body>
 
+<div id="love">好感度: 0</div>
+
+<div id="character">
+  <img id="charImg">
+</div>
+
 <div id="game">
-  <div id="character">
-    <img id="charImg">
-    <h2 id="charName"></h2>
+  <div id="ui">
+    <div id="name"></div>
+    <div id="text"></div>
+    <div id="choices"></div>
   </div>
-  <div id="text"></div>
-  <div id="choices"></div>
 </div>
 
 <script>
 // ===== APIキー =====
-const STABLE_API = "ここにStableDiffusionのAPIキー";
-const VOICE_API = "ここにElevenLabsのAPIキー";
+const STABLE_API = "ここにStableDiffusionキー";
+const VOICE_API = "ここにElevenLabsキー";
 
-// ===== キャラプロンプト =====
-const prompts = {
-  nobunaga: "handsome samurai oda nobunaga, anime style, ultra detailed, cool face",
-  hideyoshi: "handsome samurai toyotomi hideyoshi, friendly smile, anime style",
-  masamune: "handsome samurai date masamune, eyepatch, cool anime style"
+// ===== 状態 =====
+let love = 0;
+let currentChar = "";
+
+// ===== キャラ設定 =====
+const chars = {
+  nobunaga:{
+    name:"織田信長",
+    prompt:"handsome samurai oda nobunaga, anime style, ultra detailed",
+    voice:"EXAVITQu4vr4xnSDxMaL" //例
+  },
+  hideyoshi:{
+    name:"豊臣秀吉",
+    prompt:"handsome samurai smiling anime style",
+    voice:"TxGEqnHWrfWFTfGW9XjX"
+  },
+  masamune:{
+    name:"伊達政宗",
+    prompt:"cool eyepatch samurai anime",
+    voice:"VR6AewLTigWG4xSOukaG"
+  }
 };
 
-// ===== AI画像生成 =====
-async function generateImage(type){
-  const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+// ===== AI画像 =====
+async function generateImage(prompt){
+  const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core",{
     method:"POST",
     headers:{
-      "Authorization": "Bearer " + STABLE_API,
+      "Authorization":"Bearer "+STABLE_API,
       "Content-Type":"application/json"
     },
-    body: JSON.stringify({
-      prompt: prompts[type],
-      output_format: "jpeg"
+    body:JSON.stringify({
+      prompt:prompt,
+      output_format:"jpeg"
     })
   });
-
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
 
-// ===== ボイス生成 =====
-async function speak(text){
-  const res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/voice-id", {
+// ===== ボイス =====
+async function speak(text, voiceId){
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{
     method:"POST",
     headers:{
-      "xi-api-key": VOICE_API,
+      "xi-api-key":VOICE_API,
       "Content-Type":"application/json"
     },
-    body: JSON.stringify({
-      text: text,
-      voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.8
-      }
-    })
+    body:JSON.stringify({text})
   });
 
   const blob = await res.blob();
@@ -95,68 +153,89 @@ async function speak(text){
 
 // ===== シナリオ =====
 const story = {
-  start:{
-    text:"あなたは戦国時代に迷い込んだ…誰に会う？",
-    choices:[
-      {text:"信長", next:"n1"},
-      {text:"秀吉", next:"h1"},
-      {text:"政宗", next:"m1"}
-    ]
-  },
+start:{
+  text:"戦国時代――あなたは誰と運命を紡ぐ？",
+  choices:[
+    {text:"信長", next:"n1"},
+    {text:"秀吉", next:"h1"},
+    {text:"政宗", next:"m1"}
+  ]
+},
 
-  n1:{
-    char:"織田信長",
-    img:"nobunaga",
-    text:"…貴様、ただ者ではないな。",
-    choices:[
-      {text:"あなたに惹かれる", next:"end"},
-      {text:"怖い…", next:"end2"}
-    ]
-  },
+n1:{
+  char:"nobunaga",
+  text:"…俺の前に立つとは、いい度胸だ。",
+  choices:[
+    {text:"惹かれます (+10)", next:"n2", love:10},
+    {text:"怖いです (-5)", next:"n3", love:-5}
+  ]
+},
+n2:{
+  char:"nobunaga",
+  text:"フッ…面白い女だ。",
+  choices:[
+    {text:"もっと知りたい (+10)", next:"end", love:10},
+    {text:"距離を置く (-5)", next:"end2", love:-5}
+  ]
+},
+n3:{
+  char:"nobunaga",
+  text:"弱き者は不要だ。",
+  choices:[
+    {text:"強くなる (+5)", next:"end", love:5},
+    {text:"逃げる (-10)", next:"end2", love:-10}
+  ]
+},
 
-  h1:{
-    char:"豊臣秀吉",
-    img:"hideyoshi",
-    text:"ええ顔しとるやないか！",
-    choices:[
-      {text:"優しいですね", next:"end"},
-      {text:"怪しい…", next:"end2"}
-    ]
-  },
+h1:{
+  char:"hideyoshi",
+  text:"ええ子やなぁ！ワシ好きやで！",
+  choices:[
+    {text:"優しい (+10)", next:"end", love:10},
+    {text:"軽い (-5)", next:"end2", love:-5}
+  ]
+},
 
-  m1:{
-    char:"伊達政宗",
-    img:"masamune",
-    text:"面白い女だ。",
-    choices:[
-      {text:"好きかも", next:"end"},
-      {text:"距離を置く", next:"end2"}
-    ]
-  },
+m1:{
+  char:"masamune",
+  text:"退屈はさせるなよ。",
+  choices:[
+    {text:"惹かれる (+10)", next:"end", love:10},
+    {text:"怖い (-5)", next:"end2", love:-5}
+  ]
+},
 
-  end:{
-    text:"恋が始まる――",
-    choices:[{text:"最初へ", next:"start"}]
-  },
-
-  end2:{
-    text:"すれ違いのまま終わった…",
-    choices:[{text:"戻る", next:"start"}]
-  }
+end:{
+  text:"恋が始まる――",
+  choices:[{text:"最初へ", next:"start"}]
+},
+end2:{
+  text:"すれ違いのまま終わった…",
+  choices:[{text:"戻る", next:"start"}]
+}
 };
 
 // ===== 表示 =====
 async function showScene(key){
   const scene = story[key];
-  document.getElementById("text").innerText = scene.text;
-  document.getElementById("charName").innerText = scene.char || "";
 
-  if(scene.img){
-    const imgURL = await generateImage(scene.img);
-    document.getElementById("charImg").src = imgURL;
+  document.getElementById("text").innerText = scene.text;
+
+  if(scene.char){
+    currentChar = scene.char;
+    const c = chars[scene.char];
+
+    document.getElementById("name").innerText = c.name;
+
+    const img = await generateImage(c.prompt);
+    document.getElementById("charImg").src = img;
+
+    speak(scene.text, c.voice);
+  } else {
+    document.getElementById("name").innerText = "";
   }
 
-  speak(scene.text);
+  document.getElementById("love").innerText = "好感度: " + love;
 
   const choicesDiv = document.getElementById("choices");
   choicesDiv.innerHTML = "";
@@ -164,11 +243,17 @@ async function showScene(key){
   scene.choices.forEach(c=>{
     const btn = document.createElement("button");
     btn.innerText = c.text;
-    btn.onclick = ()=>showScene(c.next);
+
+    btn.onclick = ()=>{
+      love += c.love || 0;
+      showScene(c.next);
+    };
+
     choicesDiv.appendChild(btn);
   });
 }
 
+// ===== スタート =====
 showScene("start");
 </script>
 
