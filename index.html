@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>国宝級イケメン恋愛シミュレーション</title>
+<title>国宝級イケメン恋愛ゲーム</title>
 <style>
 body {
     margin: 0;
@@ -36,7 +36,7 @@ body {
 
 .choice {
     display: block;
-    margin: 10px;
+    margin: 8px;
     padding: 10px;
     background: #444;
     border-radius: 10px;
@@ -52,173 +52,169 @@ body {
 
 <div id="game">
     <div id="image"></div>
-    <div id="name"></div>
-    <div id="text"></div>
+    <div id="name">キャラを選んでください</div>
+    <div id="text">あなたの運命の相手は…？</div>
     <div id="choices"></div>
 </div>
 
 <script>
 let affection = 0;
+let selectedChar = null;
 
-// キャラ（今回は天使イケメン固定で長編）
-const character = {
-    name: "👼 天使のイケメン",
-    pos: 0
-};
+// キャラ一覧（画像位置）
+const characters = [
+ {name:"👼 天使", pos:0, type:"angel"},
+ {name:"😈 悪魔", pos:1, type:"devil"},
+ {name:"🧙 仙人", pos:2, type:"sage"},
+ {name:"⚔️ 剣士", pos:3, type:"knight"},
+ {name:"🎸 バンドマン", pos:4, type:"band"},
+ {name:"📚 メガネ", pos:5, type:"smart"},
+ {name:"🏀 スポーツ", pos:6, type:"sport"},
+ {name:"🌸 幼なじみ", pos:7, type:"child"},
+ {name:"👔 エリート", pos:8, type:"elite"},
+ {name:"🕶️ ミステリアス", pos:9, type:"mystery"}
+];
 
-document.getElementById("image").style.backgroundPosition = "0% 0";
-document.getElementById("name").innerText = character.name;
+// キャラ別セリフ
+function getLine(type, scene){
+    const lines = {
+        angel: ["君を守るよ","一緒にいよう","運命だね"],
+        devil: ["契約する？","逃がさない","楽しくなってきた"],
+        sage: ["面白い縁じゃ","焦るでない","導いてやろう"],
+        knight: ["守る","任せろ","信じてくれ"],
+        band: ["ノッてるね","最高だ","もっと楽しもう"],
+        smart: ["興味深い","理論的だね","君は特別だ"],
+        sport: ["いくぞ！","楽しいな！","一緒に頑張ろう"],
+        child: ["昔みたいだね","安心する","ずっと一緒だよ"],
+        elite: ["完璧だ","計画通り","君は必要だ"],
+        mystery: ["…面白い","気になる","離れないで"]
+    };
+    return lines[type][scene];
+}
+
+// 初期：キャラ選択
+function showCharacterSelect(){
+    const choices = document.getElementById("choices");
+    choices.innerHTML = "";
+
+    characters.forEach((c, i)=>{
+        const btn = document.createElement("div");
+        btn.className = "choice";
+        btn.innerText = c.name;
+        btn.onclick = ()=>{
+            selectedChar = c;
+            affection = 0;
+            startStory();
+        };
+        choices.appendChild(btn);
+    });
+}
+
+// ストーリー開始
+function startStory(){
+    document.getElementById("image").style.backgroundPosition =
+        (-selectedChar.pos * 100) + "% 0";
+
+    document.getElementById("name").innerText = selectedChar.name;
+
+    current = "start";
+    showScene();
+}
 
 // シナリオ
 const story = {
-
-start: {
-    text: "君、こんなところで何してるの？",
-    choices: [
-        {text:"あなたは誰？", next:"q1", affection:0},
-        {text:"迷子なの…", next:"q2", affection:1}
-    ]
+start:{
+ text:"君に会えたのは偶然じゃない気がする",
+ choices:[
+  {text:"どういう意味？", next:"a", aff:1},
+  {text:"ロマンチックだね", next:"b", aff:2}
+ ]
 },
-
-q1: {
-    text: "俺？ただの通りすがり…って言ったら信じる？",
-    choices: [
-        {text:"信じる", next:"q3", affection:1},
-        {text:"怪しい…", next:"q4", affection:-1}
-    ]
+a:{
+ text:"気になる？もっと知りたい？",
+ choices:[
+  {text:"知りたい", next:"c", aff:2},
+  {text:"別に", next:"d", aff:-1}
+ ]
 },
-
-q2: {
-    text: "そっか、じゃあ一緒に帰ろうか",
-    choices: [
-        {text:"ありがとう", next:"q3", affection:2},
-        {text:"大丈夫", next:"q4", affection:-1}
-    ]
+b:{
+ text:"そういう君、好きだよ",
+ choices:[
+  {text:"嬉しい", next:"c", aff:2},
+  {text:"からかわないで", next:"d", aff:0}
+ ]
 },
-
-q3: {
-    text: "君って優しいね。もっと話したいな",
-    choices: [
-        {text:"私も", next:"q5", affection:2},
-        {text:"どうかな…", next:"q6", affection:-1}
-    ]
+c:{
+ text:"一緒に過ごそう",
+ choices:[
+  {text:"いいよ", next:"mid", aff:2},
+  {text:"少しだけ", next:"mid", aff:1}
+ ]
 },
-
-q4: {
-    text: "警戒されちゃったか…でも嫌いじゃない",
-    choices: [
-        {text:"ごめんね", next:"q5", affection:1},
-        {text:"当然でしょ", next:"q6", affection:-2}
-    ]
+d:{
+ text:"素直じゃないね",
+ choices:[
+  {text:"ごめん", next:"mid", aff:1},
+  {text:"ほっといて", next:"bad", aff:-3}
+ ]
 },
-
-q5: {
-    text: "じゃあ少しだけデートしようか",
-    choices: [
-        {text:"いいよ", next:"date1", affection:2},
-        {text:"ちょっとだけ", next:"date1", affection:1}
-    ]
+mid:{
+ text:function(){return getLine(selectedChar.type,0);},
+ choices:[
+  {text:"ドキドキする", next:"mid2", aff:2},
+  {text:"普通かな", next:"mid2", aff:0}
+ ]
 },
-
-q6: {
-    text: "無理しなくていいよ。でも離れたくないな",
-    choices: [
-        {text:"じゃあ少しだけ", next:"date1", affection:1},
-        {text:"やっぱ帰る", next:"badEnd", affection:-3}
-    ]
+mid2:{
+ text:function(){return getLine(selectedChar.type,1);},
+ choices:[
+  {text:"好きかも", next:"end", aff:3},
+  {text:"まだわからない", next:"end", aff:0}
+ ]
 },
-
-// デートパート（長め）
-date1: {
-    text: "どこ行きたい？",
-    choices: [
-        {text:"カフェ", next:"date2", affection:2},
-        {text:"公園", next:"date3", affection:1},
-        {text:"どこでもいい", next:"date4", affection:0}
-    ]
+end:{
+ text:function(){
+   if(affection>=7) return "🌟ハッピーエンド";
+   if(affection>=3) return "💖ノーマルエンド";
+   return "😢バッド寄りエンド";
+ },
+ choices:[
+  {text:"もう一度遊ぶ", next:"reset", aff:0}
+ ]
 },
-
-date2: {
-    text: "甘いもの好き？一緒に食べよう",
-    choices: [
-        {text:"好き！", next:"mid1", affection:2},
-        {text:"普通", next:"mid1", affection:0}
-    ]
+bad:{
+ text:"去ってしまった…",
+ choices:[
+  {text:"戻る", next:"reset", aff:0}
+ ]
 },
-
-date3: {
-    text: "風気持ちいいね…君といると落ち着く",
-    choices: [
-        {text:"嬉しい", next:"mid1", affection:2},
-        {text:"そうかな", next:"mid1", affection:0}
-    ]
-},
-
-date4: {
-    text: "君らしいね。でも嫌いじゃない",
-    choices: [
-        {text:"ありがとう", next:"mid1", affection:1},
-        {text:"適当でごめん", next:"mid1", affection:-1}
-    ]
-},
-
-mid1: {
-    text: "ねえ、俺のことどう思う？",
-    choices: [
-        {text:"好きかも", next:"mid2", affection:3},
-        {text:"まだ分からない", next:"mid2", affection:0}
-    ]
-},
-
-mid2: {
-    text: "そっか…でも俺はもう決めてるよ",
-    choices: [
-        {text:"え？", next:"endCheck", affection:0},
-        {text:"なにを？", next:"endCheck", affection:1}
-    ]
-},
-
-endCheck: {
-    text: "君を離さないってこと",
-    choices: [
-        {text:"嬉しい", next:"end", affection:2},
-        {text:"ちょっと怖い", next:"end", affection:-1}
-    ]
-},
-
-end: {
-    text: function(){
-        if(affection >= 8) return "🌟ハッピーエンド：君は俺の運命だ";
-        if(affection >= 4) return "💖ノーマルエンド：これから知っていこう";
-        return "😢ビターエンド：また会えるかな";
-    },
-    choices: []
-},
-
-badEnd: {
-    text: "君は去っていった…",
-    choices: []
+reset:{
+ text:"",
+ choices:[]
 }
-
 };
 
 let current = "start";
 
-function showScene() {
+function showScene(){
     const scene = story[current];
 
     document.getElementById("text").innerText =
-        typeof scene.text === "function" ? scene.text() : scene.text;
+      typeof scene.text === "function" ? scene.text() : scene.text;
 
     const choicesDiv = document.getElementById("choices");
     choicesDiv.innerHTML = "";
 
-    scene.choices.forEach(choice => {
+    scene.choices.forEach(choice=>{
         const btn = document.createElement("div");
         btn.className = "choice";
         btn.innerText = choice.text;
-        btn.onclick = () => {
-            affection += choice.affection;
+        btn.onclick = ()=>{
+            if(choice.next==="reset"){
+                showCharacterSelect();
+                return;
+            }
+            affection += choice.aff;
             current = choice.next;
             showScene();
         };
@@ -226,7 +222,237 @@ function showScene() {
     });
 }
 
-showScene();
+// 初期起動
+showCharacterSelect();
+</script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>国宝級イケメン恋愛ゲーム</title>
+<style>
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background: linear-gradient(#1a1a2e, #000);
+    color: white;
+    text-align: center;
+}
+
+#game {
+    max-width: 400px;
+    margin: auto;
+}
+
+#image {
+    width: 100%;
+    height: 300px;
+    background-image: url("a_collection_of_ten_digital_anime_style_illustrati.png");
+    background-size: 1000% 100%;
+}
+
+#name {
+    font-size: 22px;
+    margin-top: 10px;
+}
+
+#text {
+    margin: 20px;
+    min-height: 100px;
+}
+
+.choice {
+    display: block;
+    margin: 8px;
+    padding: 10px;
+    background: #444;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.choice:hover {
+    background: #666;
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+    <div id="image"></div>
+    <div id="name">キャラを選んでください</div>
+    <div id="text">あなたの運命の相手は…？</div>
+    <div id="choices"></div>
+</div>
+
+<script>
+let affection = 0;
+let selectedChar = null;
+
+// キャラ一覧（画像位置）
+const characters = [
+ {name:"👼 天使", pos:0, type:"angel"},
+ {name:"😈 悪魔", pos:1, type:"devil"},
+ {name:"🧙 仙人", pos:2, type:"sage"},
+ {name:"⚔️ 剣士", pos:3, type:"knight"},
+ {name:"🎸 バンドマン", pos:4, type:"band"},
+ {name:"📚 メガネ", pos:5, type:"smart"},
+ {name:"🏀 スポーツ", pos:6, type:"sport"},
+ {name:"🌸 幼なじみ", pos:7, type:"child"},
+ {name:"👔 エリート", pos:8, type:"elite"},
+ {name:"🕶️ ミステリアス", pos:9, type:"mystery"}
+];
+
+// キャラ別セリフ
+function getLine(type, scene){
+    const lines = {
+        angel: ["君を守るよ","一緒にいよう","運命だね"],
+        devil: ["契約する？","逃がさない","楽しくなってきた"],
+        sage: ["面白い縁じゃ","焦るでない","導いてやろう"],
+        knight: ["守る","任せろ","信じてくれ"],
+        band: ["ノッてるね","最高だ","もっと楽しもう"],
+        smart: ["興味深い","理論的だね","君は特別だ"],
+        sport: ["いくぞ！","楽しいな！","一緒に頑張ろう"],
+        child: ["昔みたいだね","安心する","ずっと一緒だよ"],
+        elite: ["完璧だ","計画通り","君は必要だ"],
+        mystery: ["…面白い","気になる","離れないで"]
+    };
+    return lines[type][scene];
+}
+
+// 初期：キャラ選択
+function showCharacterSelect(){
+    const choices = document.getElementById("choices");
+    choices.innerHTML = "";
+
+    characters.forEach((c, i)=>{
+        const btn = document.createElement("div");
+        btn.className = "choice";
+        btn.innerText = c.name;
+        btn.onclick = ()=>{
+            selectedChar = c;
+            affection = 0;
+            startStory();
+        };
+        choices.appendChild(btn);
+    });
+}
+
+// ストーリー開始
+function startStory(){
+    document.getElementById("image").style.backgroundPosition =
+        (-selectedChar.pos * 100) + "% 0";
+
+    document.getElementById("name").innerText = selectedChar.name;
+
+    current = "start";
+    showScene();
+}
+
+// シナリオ
+const story = {
+start:{
+ text:"君に会えたのは偶然じゃない気がする",
+ choices:[
+  {text:"どういう意味？", next:"a", aff:1},
+  {text:"ロマンチックだね", next:"b", aff:2}
+ ]
+},
+a:{
+ text:"気になる？もっと知りたい？",
+ choices:[
+  {text:"知りたい", next:"c", aff:2},
+  {text:"別に", next:"d", aff:-1}
+ ]
+},
+b:{
+ text:"そういう君、好きだよ",
+ choices:[
+  {text:"嬉しい", next:"c", aff:2},
+  {text:"からかわないで", next:"d", aff:0}
+ ]
+},
+c:{
+ text:"一緒に過ごそう",
+ choices:[
+  {text:"いいよ", next:"mid", aff:2},
+  {text:"少しだけ", next:"mid", aff:1}
+ ]
+},
+d:{
+ text:"素直じゃないね",
+ choices:[
+  {text:"ごめん", next:"mid", aff:1},
+  {text:"ほっといて", next:"bad", aff:-3}
+ ]
+},
+mid:{
+ text:function(){return getLine(selectedChar.type,0);},
+ choices:[
+  {text:"ドキドキする", next:"mid2", aff:2},
+  {text:"普通かな", next:"mid2", aff:0}
+ ]
+},
+mid2:{
+ text:function(){return getLine(selectedChar.type,1);},
+ choices:[
+  {text:"好きかも", next:"end", aff:3},
+  {text:"まだわからない", next:"end", aff:0}
+ ]
+},
+end:{
+ text:function(){
+   if(affection>=7) return "🌟ハッピーエンド";
+   if(affection>=3) return "💖ノーマルエンド";
+   return "😢バッド寄りエンド";
+ },
+ choices:[
+  {text:"もう一度遊ぶ", next:"reset", aff:0}
+ ]
+},
+bad:{
+ text:"去ってしまった…",
+ choices:[
+  {text:"戻る", next:"reset", aff:0}
+ ]
+},
+reset:{
+ text:"",
+ choices:[]
+}
+};
+
+let current = "start";
+
+function showScene(){
+    const scene = story[current];
+
+    document.getElementById("text").innerText =
+      typeof scene.text === "function" ? scene.text() : scene.text;
+
+    const choicesDiv = document.getElementById("choices");
+    choicesDiv.innerHTML = "";
+
+    scene.choices.forEach(choice=>{
+        const btn = document.createElement("div");
+        btn.className = "choice";
+        btn.innerText = choice.text;
+        btn.onclick = ()=>{
+            if(choice.next==="reset"){
+                showCharacterSelect();
+                return;
+            }
+            affection += choice.aff;
+            current = choice.next;
+            showScene();
+        };
+        choicesDiv.appendChild(btn);
+    });
+}
+
+// 初期起動
+showCharacterSelect();
 </script>
 
 </body>
