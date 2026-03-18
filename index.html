@@ -2,13 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>イケメンガチャ（ボイス付き）</title>
+<title>国宝級イケメンガチャ</title>
 <style>
 body {
     margin: 0;
     font-family: sans-serif;
     text-align: center;
-    background: radial-gradient(circle, #2a2a4a, #0d0d1a);
+    background: radial-gradient(circle, #1a1a2e, #000);
     color: white;
 }
 
@@ -23,21 +23,21 @@ button {
     cursor: pointer;
 }
 
-button:hover { background: orange; }
-
 #card {
-    width: 220px;
-    height: 300px;
+    width: 240px;
+    height: 320px;
     margin: 30px auto;
     border-radius: 15px;
     overflow: hidden;
-    box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    box-shadow: 0 0 25px rgba(255,255,255,0.3);
 }
 
-#card img {
+/* ←ここが重要：1枚画像を切り出す */
+.card-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    background-image: url("a_collection_of_ten_digital_anime_style_illustrati.png");
+    background-size: 1000% 100%; /* 横に10分割 */
 }
 
 #result {
@@ -52,7 +52,7 @@ button:hover { background: orange; }
 
 @keyframes glow {
     from { text-shadow: 0 0 10px gold; }
-    to { text-shadow: 0 0 30px yellow; }
+    to { text-shadow: 0 0 40px yellow; }
 }
 
 .spin {
@@ -67,57 +67,46 @@ button:hover { background: orange; }
 </head>
 <body>
 
-<h1>✨イケメンガチャ✨</h1>
+<h1>✨国宝級イケメンガチャ✨</h1>
 <button onclick="drawGacha()">ガチャを引く</button>
 
 <div id="card">
-    <img id="cardImg" src="https://picsum.photos/200/300?random=1">
+    <div id="img" class="card-img"></div>
 </div>
 
 <div id="result">ボタンを押してガチャを引こう！</div>
 
 <script>
 const characters = [
-    {name:"👼 天使のイケメン", img:"https://picsum.photos/200/300?random=11", rare:true, voice:"君に出会うために舞い降りたよ"},
-    {name:"😈 悪魔のイケメン", img:"https://picsum.photos/200/300?random=12", rare:true, voice:"契約する？…俺と"},
-    {name:"🧙 仙人のイケメン", img:"https://picsum.photos/200/300?random=13", rare:true, voice:"運命とは面白いものじゃのう"},
+    {name:"👼 天使のイケメン", pos:0, rare:true, voice:"君に出会うために来たよ"},
+    {name:"😈 悪魔のイケメン", pos:1, rare:true, voice:"逃げられると思う？"},
+    {name:"🧙 仙人のイケメン", pos:2, rare:true, voice:"これは運命じゃな"},
 
-    {name:"⚔️ 剣士イケメン", img:"https://picsum.photos/200/300?random=2", voice:"守ってみせる"},
-    {name:"🎸 バンドマン", img:"https://picsum.photos/200/300?random=3", voice:"俺の音、聴いてく？"},
-    {name:"📚 メガネ男子", img:"https://picsum.photos/200/300?random=4", voice:"興味深いね"},
-    {name:"🏀 スポーツ男子", img:"https://picsum.photos/200/300?random=5", voice:"一緒に走ろうぜ！"},
-    {name:"🌸 幼なじみ", img:"https://picsum.photos/200/300?random=6", voice:"ずっと一緒だよな？"},
-    {name:"👔 エリート", img:"https://picsum.photos/200/300?random=7", voice:"計画通りだ"},
-    {name:"🕶️ ミステリアス", img:"https://picsum.photos/200/300?random=8", voice:"…面白い"}
+    {name:"⚔️ 剣士イケメン", pos:3, voice:"守るよ"},
+    {name:"🎸 バンドマン", pos:4, voice:"俺の音、感じろ"},
+    {name:"📚 メガネ男子", pos:5, voice:"興味深い"},
+    {name:"🏀 スポーツ男子", pos:6, voice:"勝負しようぜ"},
+    {name:"🌸 幼なじみ", pos:7, voice:"ずっと一緒だよな"},
+    {name:"👔 エリート", pos:8, voice:"完璧だ"},
+    {name:"🕶️ ミステリアス", pos:9, voice:"…悪くない"}
 ];
 
 function speak(text) {
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "ja-JP";
-    utter.rate = 1;
+    const uttr = new SpeechSynthesisUtterance(text);
+    uttr.lang = "ja-JP";
     speechSynthesis.cancel();
-    speechSynthesis.speak(utter);
+    speechSynthesis.speak(uttr);
 }
 
 function drawGacha() {
     const card = document.getElementById("card");
-    const img = document.getElementById("cardImg");
+    const img = document.getElementById("img");
     const result = document.getElementById("result");
 
-    result.innerHTML = "・・・ガチャ中・・・";
+    result.innerHTML = "・・・演出中・・・";
     card.classList.add("spin");
 
-    let count = 0;
-    const interval = setInterval(() => {
-        img.src = "https://picsum.photos/200/300?random=" + Math.floor(Math.random()*100);
-        count++;
-        if(count > 10){
-            clearInterval(interval);
-            reveal();
-        }
-    }, 100);
-
-    function reveal() {
+    setTimeout(() => {
         card.classList.remove("spin");
 
         const rand = Math.random() * 100;
@@ -128,7 +117,8 @@ function drawGacha() {
         else if (rand < 3) selected = characters[2];
         else selected = characters[3 + Math.floor(Math.random()*7)];
 
-        img.src = selected.img;
+        /* ←ここで画像位置変更 */
+        img.style.backgroundPosition = (-selected.pos * 100) + "% 0";
 
         if (selected.rare) {
             result.innerHTML = "🌟大当たり！🌟<br>" + selected.name;
@@ -138,9 +128,9 @@ function drawGacha() {
             result.className = "";
         }
 
-        // ボイス再生
         speak(selected.voice);
-    }
+
+    }, 1200);
 }
 </script>
 
