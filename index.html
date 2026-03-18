@@ -2,43 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>戦国恋愛絵巻</title>
+<title>戦国恋愛絵巻AI版</title>
 <style>
 body {
   margin: 0;
-  font-family: "Hiragino Mincho ProN", serif;
+  font-family: serif;
   background: url("https://images.unsplash.com/photo-1549880338-65ddcdfd017b") no-repeat center/cover;
   color: white;
 }
 #game {
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
-#character {
-  text-align: center;
-}
-#character img {
-  height: 300px;
-}
-#text {
-  padding: 20px;
-  font-size: 18px;
-}
-#choices button {
-  display: block;
-  width: 90%;
-  margin: 10px auto;
-  padding: 10px;
-  background: #5a2a2a;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-#choices button:hover {
-  background: #8b3a3a;
+#character img { height: 320px; }
+#text { padding: 20px; font-size: 18px; }
+button {
+  display:block;
+  width:90%;
+  margin:10px auto;
+  padding:10px;
+  background:#6b2c2c;
+  color:white;
+  border:none;
 }
 </style>
 </head>
@@ -46,173 +34,141 @@ body {
 
 <div id="game">
   <div id="character">
-    <img id="charImg" src="">
+    <img id="charImg">
     <h2 id="charName"></h2>
   </div>
-
   <div id="text"></div>
-
   <div id="choices"></div>
 </div>
 
 <script>
-// ===== キャラ画像（AI風イラスト） =====
-const images = {
-  nobunaga: "https://images.unsplash.com/photo-1607746882042-944635dfe10e",
-  hideyoshi: "https://images.unsplash.com/photo-1544005313-94ddf0286df2",
-  masamune: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+// ===== APIキー =====
+const STABLE_API = "ここにStableDiffusionのAPIキー";
+const VOICE_API = "ここにElevenLabsのAPIキー";
+
+// ===== キャラプロンプト =====
+const prompts = {
+  nobunaga: "handsome samurai oda nobunaga, anime style, ultra detailed, cool face",
+  hideyoshi: "handsome samurai toyotomi hideyoshi, friendly smile, anime style",
+  masamune: "handsome samurai date masamune, eyepatch, cool anime style"
 };
 
-// ===== 音声 =====
-function speak(text){
-  const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "ja-JP";
-  speechSynthesis.speak(msg);
+// ===== AI画像生成 =====
+async function generateImage(type){
+  const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core", {
+    method:"POST",
+    headers:{
+      "Authorization": "Bearer " + STABLE_API,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      prompt: prompts[type],
+      output_format: "jpeg"
+    })
+  });
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+// ===== ボイス生成 =====
+async function speak(text){
+  const res = await fetch("https://api.elevenlabs.io/v1/text-to-speech/voice-id", {
+    method:"POST",
+    headers:{
+      "xi-api-key": VOICE_API,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      text: text,
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.8
+      }
+    })
+  });
+
+  const blob = await res.blob();
+  const audio = new Audio(URL.createObjectURL(blob));
+  audio.play();
 }
 
 // ===== シナリオ =====
 const story = {
-  start: {
-    char: "",
-    text: "戦国の世――あなたは不思議な力で、三人の武将と出会う。",
-    choices: [
-      {text:"織田信長に会う", next:"n1"},
-      {text:"豊臣秀吉に会う", next:"h1"},
-      {text:"伊達政宗に会う", next:"m1"}
+  start:{
+    text:"あなたは戦国時代に迷い込んだ…誰に会う？",
+    choices:[
+      {text:"信長", next:"n1"},
+      {text:"秀吉", next:"h1"},
+      {text:"政宗", next:"m1"}
     ]
   },
 
-  // ===== 信長 =====
-  n1: {
-    char: "織田信長",
-    img: "nobunaga",
-    text: "ほう…貴様、面白い顔をしているな。",
-    choices: [
-      {text:"あなたに興味があります", next:"n2"},
-      {text:"少し怖いです…", next:"n3"}
-    ]
-  },
-  n2: {
-    char: "織田信長",
-    img: "nobunaga",
-    text: "フッ、正直なやつだ。嫌いではない。",
-    choices: [
-      {text:"そばにいたい", next:"end_love"},
-      {text:"もっと知りたい", next:"n3"}
-    ]
-  },
-  n3: {
-    char: "織田信長",
-    img: "nobunaga",
-    text: "恐れるな。俺は強き者を好む。",
-    choices: [
-      {text:"強くなりたい", next:"end_love"},
-      {text:"やっぱり怖い…", next:"end_bad"}
+  n1:{
+    char:"織田信長",
+    img:"nobunaga",
+    text:"…貴様、ただ者ではないな。",
+    choices:[
+      {text:"あなたに惹かれる", next:"end"},
+      {text:"怖い…", next:"end2"}
     ]
   },
 
-  // ===== 秀吉 =====
-  h1: {
-    char: "豊臣秀吉",
-    img: "hideyoshi",
-    text: "おお！ええ子やなあ！",
-    choices: [
-      {text:"優しいですね", next:"h2"},
-      {text:"調子がいいですね", next:"h3"}
-    ]
-  },
-  h2: {
-    char: "豊臣秀吉",
-    img: "hideyoshi",
-    text: "はは！気に入ったで！",
-    choices: [
-      {text:"一緒にいたい", next:"end_love"},
-      {text:"様子を見る", next:"h3"}
-    ]
-  },
-  h3: {
-    char: "豊臣秀吉",
-    img: "hideyoshi",
-    text: "世渡り上手言うてくれや！",
-    choices: [
-      {text:"頼りになります", next:"end_love"},
-      {text:"信用できない", next:"end_bad"}
+  h1:{
+    char:"豊臣秀吉",
+    img:"hideyoshi",
+    text:"ええ顔しとるやないか！",
+    choices:[
+      {text:"優しいですね", next:"end"},
+      {text:"怪しい…", next:"end2"}
     ]
   },
 
-  // ===== 政宗 =====
-  m1: {
-    char: "伊達政宗",
-    img: "masamune",
-    text: "面白い奴だな。",
-    choices: [
-      {text:"あなたに惹かれる", next:"m2"},
-      {text:"クールですね", next:"m3"}
-    ]
-  },
-  m2: {
-    char: "伊達政宗",
-    img: "masamune",
-    text: "フッ…悪くない。",
-    choices: [
-      {text:"もっと近づきたい", next:"end_love"},
-      {text:"少し距離を取る", next:"m3"}
-    ]
-  },
-  m3: {
-    char: "伊達政宗",
-    img: "masamune",
-    text: "距離を取るか…それもいい。",
-    choices: [
-      {text:"でも気になる", next:"end_love"},
-      {text:"離れる", next:"end_bad"}
+  m1:{
+    char:"伊達政宗",
+    img:"masamune",
+    text:"面白い女だ。",
+    choices:[
+      {text:"好きかも", next:"end"},
+      {text:"距離を置く", next:"end2"}
     ]
   },
 
-  // ===== エンディング =====
-  end_love: {
-    char: "",
-    text: "あなたは武将と心を通わせた――恋が芽生える。",
-    choices: [
-      {text:"もう一度遊ぶ", next:"start"}
-    ]
+  end:{
+    text:"恋が始まる――",
+    choices:[{text:"最初へ", next:"start"}]
   },
-  end_bad: {
-    char: "",
-    text: "あなたは去った…戦国の風だけが残る。",
-    choices: [
-      {text:"やり直す", next:"start"}
-    ]
+
+  end2:{
+    text:"すれ違いのまま終わった…",
+    choices:[{text:"戻る", next:"start"}]
   }
 };
 
-// ===== 表示処理 =====
-function showScene(key){
+// ===== 表示 =====
+async function showScene(key){
   const scene = story[key];
   document.getElementById("text").innerText = scene.text;
   document.getElementById("charName").innerText = scene.char || "";
-  
-  const img = document.getElementById("charImg");
+
   if(scene.img){
-    img.src = images[scene.img];
-  } else {
-    img.src = "";
+    const imgURL = await generateImage(scene.img);
+    document.getElementById("charImg").src = imgURL;
   }
 
   speak(scene.text);
 
   const choicesDiv = document.getElementById("choices");
   choicesDiv.innerHTML = "";
-  
-  scene.choices.forEach(choice=>{
+
+  scene.choices.forEach(c=>{
     const btn = document.createElement("button");
-    btn.innerText = choice.text;
-    btn.onclick = ()=>showScene(choice.next);
+    btn.innerText = c.text;
+    btn.onclick = ()=>showScene(c.next);
     choicesDiv.appendChild(btn);
   });
 }
 
-// ===== スタート =====
 showScene("start");
 </script>
 
