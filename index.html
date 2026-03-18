@@ -2,300 +2,231 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>戦国恋愛絵巻 完全版</title>
-
+<title>国宝級イケメン恋愛シミュレーション</title>
 <style>
-body{
-  margin:0;
-  font-family:serif;
-  color:white;
-  background-size:cover;
-  background-position:center;
-  transition:1s;
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background: linear-gradient(#1a1a2e, #000);
+    color: white;
+    text-align: center;
 }
 
-#game{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-end;
-  background:rgba(0,0,0,0.5);
+#game {
+    max-width: 400px;
+    margin: auto;
 }
 
-#character{
-  position:absolute;
-  bottom:130px;
-  left:50%;
-  transform:translateX(-50%);
+#image {
+    width: 100%;
+    height: 300px;
+    background-image: url("a_collection_of_ten_digital_anime_style_illustrati.png");
+    background-size: 1000% 100%;
 }
 
-#character img{
-  height:380px;
+#name {
+    font-size: 22px;
+    margin-top: 10px;
 }
 
-#ui{
-  background:rgba(0,0,0,0.75);
-  padding:15px;
+#text {
+    margin: 20px;
+    min-height: 100px;
 }
 
-#name{ color:#ffcccc; }
-
-button{
-  width:100%;
-  margin-top:8px;
-  padding:10px;
-  background:#7a2f2f;
-  border:none;
-  color:white;
+.choice {
+    display: block;
+    margin: 10px;
+    padding: 10px;
+    background: #444;
+    border-radius: 10px;
+    cursor: pointer;
 }
 
-button:hover{
-  background:#b33;
-}
-
-#love{
-  position:absolute;
-  top:10px;
-  left:10px;
-  background:rgba(0,0,0,0.6);
-  padding:5px;
+.choice:hover {
+    background: #666;
 }
 </style>
 </head>
-
 <body>
 
-<div id="love">好感度: 0</div>
-
-<div id="character">
-  <img id="charImg">
-</div>
-
 <div id="game">
-  <div id="ui">
+    <div id="image"></div>
     <div id="name"></div>
     <div id="text"></div>
     <div id="choices"></div>
-  </div>
 </div>
 
 <script>
-// ===== 状態 =====
-let love = 0;
-let route = "";
+let affection = 0;
 
-// ===== 江戸風背景（固定） =====
-const backgrounds = {
-  castle:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-  tatami:"https://images.unsplash.com/photo-1585559605151-4d6a6aeb8f8d",
-  night:"https://images.unsplash.com/photo-1501785888041-af3ef285b470"
+// キャラ（今回は天使イケメン固定で長編）
+const character = {
+    name: "👼 天使のイケメン",
+    pos: 0
 };
 
-// ===== イケメン画像（AI風） =====
-const images = {
-  nobunaga:"https://images.unsplash.com/photo-1607746882042-944635dfe10e",
-  hideyoshi:"https://images.unsplash.com/photo-1544005313-94ddf0286df2",
-  masamune:"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
+document.getElementById("image").style.backgroundPosition = "0% 0";
+document.getElementById("name").innerText = character.name;
 
-  yukimura:"https://images.unsplash.com/photo-1547425260-76bcadfb4f2c",
-  ieyasu:"https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
-  mitsunari:"https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e",
-  motonari:"https://images.unsplash.com/photo-1544725176-7c40e5a2c9f9"
-};
-
-// ===== ボイス =====
-function speak(text){
-  const msg = new SpeechSynthesisUtterance(text);
-  msg.lang="ja-JP";
-  speechSynthesis.speak(msg);
-}
-
-// ===== シナリオ =====
+// シナリオ
 const story = {
 
-start:{
-  bg:"castle",
-  text:"江戸の世――あなたは誰と運命を紡ぐ？",
-  choices:[
-    {text:"織田信長", next:"n1"},
-    {text:"豊臣秀吉", next:"h1"},
-    {text:"伊達政宗", next:"m1"},
-    {text:"真田幸村", next:"y1"},
-    {text:"徳川家康", next:"i1"},
-    {text:"石田三成", next:"mi1"},
-    {text:"毛利元就", next:"mo1"}
-  ]
+start: {
+    text: "君、こんなところで何してるの？",
+    choices: [
+        {text:"あなたは誰？", next:"q1", affection:0},
+        {text:"迷子なの…", next:"q2", affection:1}
+    ]
 },
 
-// ===== 幸村 =====
-y1:{
-  bg:"tatami",
-  char:"真田幸村",
-  img:"yukimura",
-  setRoute:"y",
-  text:"命を賭ける覚悟はあるか？",
-  choices:[
-    {text:"ある！ +10", next:"judge", love:10},
-    {text:"ない… -5", next:"bad", love:-5}
-  ]
+q1: {
+    text: "俺？ただの通りすがり…って言ったら信じる？",
+    choices: [
+        {text:"信じる", next:"q3", affection:1},
+        {text:"怪しい…", next:"q4", affection:-1}
+    ]
 },
 
-// ===== 家康 =====
-i1:{
-  bg:"tatami",
-  char:"徳川家康",
-  img:"ieyasu",
-  setRoute:"i",
-  text:"焦るな、時を待て。",
-  choices:[
-    {text:"信じる +10", next:"judge", love:10},
-    {text:"退屈 -5", next:"bad", love:-5}
-  ]
+q2: {
+    text: "そっか、じゃあ一緒に帰ろうか",
+    choices: [
+        {text:"ありがとう", next:"q3", affection:2},
+        {text:"大丈夫", next:"q4", affection:-1}
+    ]
 },
 
-// ===== 三成 =====
-mi1:{
-  bg:"tatami",
-  char:"石田三成",
-  img:"mitsunari",
-  setRoute:"mi",
-  text:"理で動くべきだ。",
-  choices:[
-    {text:"賛成 +10", next:"judge", love:10},
-    {text:"冷たい -5", next:"bad", love:-5}
-  ]
+q3: {
+    text: "君って優しいね。もっと話したいな",
+    choices: [
+        {text:"私も", next:"q5", affection:2},
+        {text:"どうかな…", next:"q6", affection:-1}
+    ]
 },
 
-// ===== 元就 =====
-mo1:{
-  bg:"tatami",
-  char:"毛利元就",
-  img:"motonari",
-  setRoute:"mo",
-  text:"三本の矢を知っているか？",
-  choices:[
-    {text:"知ってる +10", next:"judge", love:10},
-    {text:"知らない -5", next:"bad", love:-5}
-  ]
+q4: {
+    text: "警戒されちゃったか…でも嫌いじゃない",
+    choices: [
+        {text:"ごめんね", next:"q5", affection:1},
+        {text:"当然でしょ", next:"q6", affection:-2}
+    ]
 },
 
-// ===== 既存キャラ =====
-n1:{
-  bg:"tatami",
-  char:"織田信長",
-  img:"nobunaga",
-  setRoute:"n",
-  text:"俺に従え。",
-  choices:[
-    {text:"従う +10", next:"judge", love:10},
-    {text:"拒否 -5", next:"bad", love:-5}
-  ]
+q5: {
+    text: "じゃあ少しだけデートしようか",
+    choices: [
+        {text:"いいよ", next:"date1", affection:2},
+        {text:"ちょっとだけ", next:"date1", affection:1}
+    ]
 },
 
-h1:{
-  bg:"tatami",
-  char:"豊臣秀吉",
-  img:"hideyoshi",
-  setRoute:"h",
-  text:"楽しませてくれや！",
-  choices:[
-    {text:"笑う +10", next:"judge", love:10},
-    {text:"無視 -5", next:"bad", love:-5}
-  ]
+q6: {
+    text: "無理しなくていいよ。でも離れたくないな",
+    choices: [
+        {text:"じゃあ少しだけ", next:"date1", affection:1},
+        {text:"やっぱ帰る", next:"badEnd", affection:-3}
+    ]
 },
 
-m1:{
-  bg:"night",
-  char:"伊達政宗",
-  img:"masamune",
-  setRoute:"m",
-  text:"退屈は嫌いだ。",
-  choices:[
-    {text:"楽しませる +10", next:"judge", love:10},
-    {text:"黙る -5", next:"bad", love:-5}
-  ]
+// デートパート（長め）
+date1: {
+    text: "どこ行きたい？",
+    choices: [
+        {text:"カフェ", next:"date2", affection:2},
+        {text:"公園", next:"date3", affection:1},
+        {text:"どこでもいい", next:"date4", affection:0}
+    ]
 },
 
-// ===== 判定 =====
-judge:{
-  bg:"night",
-  text:"運命の結果は――",
-  choices:[
-    {text:"見る", next:"result"}
-  ]
+date2: {
+    text: "甘いもの好き？一緒に食べよう",
+    choices: [
+        {text:"好き！", next:"mid1", affection:2},
+        {text:"普通", next:"mid1", affection:0}
+    ]
 },
 
-result:{
-  bg:"night",
-  text:function(){
-    if(love>=10) return "恋が実った――❤️";
-    return "想いは届かなかった…";
-  },
-  choices:[
-    {text:"最初へ", next:"start"}
-  ]
+date3: {
+    text: "風気持ちいいね…君といると落ち着く",
+    choices: [
+        {text:"嬉しい", next:"mid1", affection:2},
+        {text:"そうかな", next:"mid1", affection:0}
+    ]
 },
 
-bad:{
-  bg:"night",
-  text:"関係は終わった…",
-  choices:[
-    {text:"戻る", next:"start"}
-  ]
+date4: {
+    text: "君らしいね。でも嫌いじゃない",
+    choices: [
+        {text:"ありがとう", next:"mid1", affection:1},
+        {text:"適当でごめん", next:"mid1", affection:-1}
+    ]
+},
+
+mid1: {
+    text: "ねえ、俺のことどう思う？",
+    choices: [
+        {text:"好きかも", next:"mid2", affection:3},
+        {text:"まだ分からない", next:"mid2", affection:0}
+    ]
+},
+
+mid2: {
+    text: "そっか…でも俺はもう決めてるよ",
+    choices: [
+        {text:"え？", next:"endCheck", affection:0},
+        {text:"なにを？", next:"endCheck", affection:1}
+    ]
+},
+
+endCheck: {
+    text: "君を離さないってこと",
+    choices: [
+        {text:"嬉しい", next:"end", affection:2},
+        {text:"ちょっと怖い", next:"end", affection:-1}
+    ]
+},
+
+end: {
+    text: function(){
+        if(affection >= 8) return "🌟ハッピーエンド：君は俺の運命だ";
+        if(affection >= 4) return "💖ノーマルエンド：これから知っていこう";
+        return "😢ビターエンド：また会えるかな";
+    },
+    choices: []
+},
+
+badEnd: {
+    text: "君は去っていった…",
+    choices: []
 }
 
 };
 
-// ===== 表示 =====
-function showScene(key){
-  const s = story[key];
+let current = "start";
 
-  // 背景
-  document.body.style.backgroundImage = "url("+backgrounds[s.bg]+")";
+function showScene() {
+    const scene = story[current];
 
-  // ルート
-  if(s.setRoute){
-    route = s.setRoute;
-    love = 0;
-  }
+    document.getElementById("text").innerText =
+        typeof scene.text === "function" ? scene.text() : scene.text;
 
-  // テキスト
-  const text = typeof s.text==="function"?s.text():s.text;
-  document.getElementById("text").innerText = text;
+    const choicesDiv = document.getElementById("choices");
+    choicesDiv.innerHTML = "";
 
-  // 名前
-  document.getElementById("name").innerText = s.char || "";
-
-  // 画像
-  if(s.img){
-    document.getElementById("charImg").src = images[s.img];
-  } else {
-    document.getElementById("charImg").src = "";
-  }
-
-  // 好感度
-  document.getElementById("love").innerText = "好感度: "+love;
-
-  speak(text);
-
-  // 選択肢
-  const div = document.getElementById("choices");
-  div.innerHTML="";
-
-  s.choices.forEach(c=>{
-    const btn=document.createElement("button");
-    btn.innerText=c.text;
-
-    btn.onclick=()=>{
-      if(c.love) love+=c.love;
-      showScene(c.next);
-    };
-
-    div.appendChild(btn);
-  });
+    scene.choices.forEach(choice => {
+        const btn = document.createElement("div");
+        btn.className = "choice";
+        btn.innerText = choice.text;
+        btn.onclick = () => {
+            affection += choice.affection;
+            current = choice.next;
+            showScene();
+        };
+        choicesDiv.appendChild(btn);
+    });
 }
 
-showScene("start");
+showScene();
 </script>
 
 </body>
