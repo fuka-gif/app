@@ -2,17 +2,18 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>戦国恋愛絵巻 -乙女編-</title>
+<title>戦国恋愛絵巻 改良版</title>
 
 <style>
 body {
   margin:0;
-  background:url("https://images.unsplash.com/photo-1524492412937-b28074a5d7da") no-repeat center/cover;
-  font-family: "Hiragino Mincho ProN", serif;
+  font-family: serif;
   color:white;
+  background-size:cover;
+  background-position:center;
+  transition:1s;
 }
 
-/* 全体 */
 #game {
   height:100vh;
   display:flex;
@@ -21,55 +22,43 @@ body {
   background:rgba(0,0,0,0.4);
 }
 
-/* 立ち絵 */
 #character {
   position:absolute;
-  bottom:120px;
+  bottom:130px;
   left:50%;
   transform:translateX(-50%);
 }
+
 #character img {
-  height:400px;
-  transition:0.5s;
+  height:380px;
 }
 
-/* テキストウィンドウ */
 #ui {
   background:rgba(0,0,0,0.7);
   padding:15px;
 }
 
-#name {
-  font-size:20px;
-  color:#ffcccb;
-}
+#name { color:#ffcccc; }
 
-#text {
-  font-size:18px;
-  margin-top:5px;
-}
-
-/* 選択肢 */
 button {
   width:100%;
   margin-top:8px;
   padding:10px;
-  background:#8b3a3a;
+  background:#7a2f2f;
   border:none;
   color:white;
-  cursor:pointer;
-}
-button:hover {
-  background:#b04a4a;
 }
 
-/* 好感度 */
+button:hover {
+  background:#a33;
+}
+
 #love {
   position:absolute;
   top:10px;
   left:10px;
   background:rgba(0,0,0,0.6);
-  padding:5px 10px;
+  padding:5px;
 }
 </style>
 </head>
@@ -91,169 +80,210 @@ button:hover {
 </div>
 
 <script>
-// ===== APIキー =====
-const STABLE_API = "ここにStableDiffusionキー";
-const VOICE_API = "ここにElevenLabsキー";
-
 // ===== 状態 =====
 let love = 0;
-let currentChar = "";
+let route = "";
 
-// ===== キャラ設定 =====
-const chars = {
-  nobunaga:{
-    name:"織田信長",
-    prompt:"handsome samurai oda nobunaga, anime style, ultra detailed",
-    voice:"EXAVITQu4vr4xnSDxMaL" //例
-  },
-  hideyoshi:{
-    name:"豊臣秀吉",
-    prompt:"handsome samurai smiling anime style",
-    voice:"TxGEqnHWrfWFTfGW9XjX"
-  },
-  masamune:{
-    name:"伊達政宗",
-    prompt:"cool eyepatch samurai anime",
-    voice:"VR6AewLTigWG4xSOukaG"
-  }
+// ===== 背景 =====
+const backgrounds = {
+  castle:"https://images.unsplash.com/photo-1549692520-acc6669e2f0c",
+  room:"https://images.unsplash.com/photo-1505842465776-3d90f6163106",
+  night:"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
 };
 
-// ===== AI画像 =====
-async function generateImage(prompt){
-  const res = await fetch("https://api.stability.ai/v2beta/stable-image/generate/core",{
-    method:"POST",
-    headers:{
-      "Authorization":"Bearer "+STABLE_API,
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      prompt:prompt,
-      output_format:"jpeg"
-    })
-  });
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
-}
+// ===== キャラ画像（AI風） =====
+const images = {
+  nobunaga:"https://images.unsplash.com/photo-1607746882042-944635dfe10e",
+  hideyoshi:"https://images.unsplash.com/photo-1544005313-94ddf0286df2",
+  masamune:"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+};
 
 // ===== ボイス =====
-async function speak(text, voiceId){
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,{
-    method:"POST",
-    headers:{
-      "xi-api-key":VOICE_API,
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({text})
-  });
-
-  const blob = await res.blob();
-  const audio = new Audio(URL.createObjectURL(blob));
-  audio.play();
+function speak(text){
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang="ja-JP";
+  speechSynthesis.speak(msg);
 }
 
 // ===== シナリオ =====
 const story = {
+
 start:{
-  text:"戦国時代――あなたは誰と運命を紡ぐ？",
+  bg:"castle",
+  text:"戦国時代――あなたは誰と出会う？",
   choices:[
-    {text:"信長", next:"n1"},
-    {text:"秀吉", next:"h1"},
-    {text:"政宗", next:"m1"}
+    {text:"織田信長", next:"n_intro"},
+    {text:"豊臣秀吉", next:"h_intro"},
+    {text:"伊達政宗", next:"m_intro"}
   ]
 },
 
-n1:{
-  char:"nobunaga",
-  text:"…俺の前に立つとは、いい度胸だ。",
+// ===== 信長ルート =====
+n_intro:{
+  bg:"room",
+  char:"織田信長",
+  img:"nobunaga",
+  text:"…貴様、名は？",
+  setRoute:"n",
   choices:[
-    {text:"惹かれます (+10)", next:"n2", love:10},
-    {text:"怖いです (-5)", next:"n3", love:-5}
-  ]
-},
-n2:{
-  char:"nobunaga",
-  text:"フッ…面白い女だ。",
-  choices:[
-    {text:"もっと知りたい (+10)", next:"end", love:10},
-    {text:"距離を置く (-5)", next:"end2", love:-5}
-  ]
-},
-n3:{
-  char:"nobunaga",
-  text:"弱き者は不要だ。",
-  choices:[
-    {text:"強くなる (+5)", next:"end", love:5},
-    {text:"逃げる (-10)", next:"end2", love:-10}
+    {text:"名乗る（礼儀正しく）+5", next:"n_2", love:5},
+    {text:"黙る（強気）+10", next:"n_2b", love:10}
   ]
 },
 
-h1:{
-  char:"hideyoshi",
-  text:"ええ子やなぁ！ワシ好きやで！",
+n_2:{
+  bg:"room",
+  char:"織田信長",
+  img:"nobunaga",
+  text:"ほう、素直な奴だ。",
   choices:[
-    {text:"優しい (+10)", next:"end", love:10},
-    {text:"軽い (-5)", next:"end2", love:-5}
+    {text:"近づく +10", next:"n_3", love:10},
+    {text:"距離を取る -5", next:"n_bad", love:-5}
   ]
 },
 
-m1:{
-  char:"masamune",
-  text:"退屈はさせるなよ。",
+n_2b:{
+  bg:"room",
+  char:"織田信長",
+  img:"nobunaga",
+  text:"フッ…面白い。",
   choices:[
-    {text:"惹かれる (+10)", next:"end", love:10},
-    {text:"怖い (-5)", next:"end2", love:-5}
+    {text:"挑発する +10", next:"n_3", love:10},
+    {text:"謝る -5", next:"n_bad", love:-5}
   ]
 },
 
-end:{
-  text:"恋が始まる――",
-  choices:[{text:"最初へ", next:"start"}]
+n_3:{
+  bg:"night",
+  char:"織田信長",
+  img:"nobunaga",
+  text:"俺について来い。",
+  choices:[
+    {text:"ついていく", next:"judge"},
+    {text:"断る", next:"n_bad"}
+  ]
 },
-end2:{
-  text:"すれ違いのまま終わった…",
+
+n_bad:{
+  bg:"night",
+  text:"信長は去った…",
   choices:[{text:"戻る", next:"start"}]
+},
+
+// ===== 秀吉ルート =====
+h_intro:{
+  bg:"castle",
+  char:"豊臣秀吉",
+  img:"hideyoshi",
+  text:"ええ子やなぁ！",
+  setRoute:"h",
+  choices:[
+    {text:"笑う +10", next:"judge", love:10},
+    {text:"警戒する -5", next:"h_bad", love:-5}
+  ]
+},
+
+h_bad:{
+  bg:"night",
+  text:"信用されなかった…",
+  choices:[{text:"戻る", next:"start"}]
+},
+
+// ===== 政宗ルート =====
+m_intro:{
+  bg:"night",
+  char:"伊達政宗",
+  img:"masamune",
+  text:"退屈は嫌いだ。",
+  setRoute:"m",
+  choices:[
+    {text:"面白い話をする +10", next:"judge", love:10},
+    {text:"黙る -5", next:"m_bad", love:-5}
+  ]
+},
+
+m_bad:{
+  bg:"night",
+  text:"興味を失われた…",
+  choices:[{text:"戻る", next:"start"}]
+},
+
+// ===== 判定（ここが重要） =====
+judge:{
+  bg:"night",
+  text:"――運命の分かれ道",
+  choices:[
+    {text:"結果を見る", next:"result"}
+  ]
+},
+
+result:{
+  bg:"night",
+  text: function(){
+    if(route==="n" && love>=20) return "信長『貴様は俺のものだ』→恋愛成功";
+    if(route==="h" && love>=10) return "秀吉『ずっと一緒や！』→恋愛成功";
+    if(route==="m" && love>=10) return "政宗『悪くない』→恋愛成功";
+    return "想いは届かなかった…";
+  },
+  choices:[
+    {text:"最初へ", next:"start"}
+  ]
 }
+
 };
 
 // ===== 表示 =====
-async function showScene(key){
+function showScene(key){
   const scene = story[key];
 
-  document.getElementById("text").innerText = scene.text;
-
-  if(scene.char){
-    currentChar = scene.char;
-    const c = chars[scene.char];
-
-    document.getElementById("name").innerText = c.name;
-
-    const img = await generateImage(c.prompt);
-    document.getElementById("charImg").src = img;
-
-    speak(scene.text, c.voice);
-  } else {
-    document.getElementById("name").innerText = "";
+  // 背景
+  if(scene.bg){
+    document.body.style.backgroundImage = "url("+backgrounds[scene.bg]+")";
   }
 
+  // ルート設定
+  if(scene.setRoute){
+    route = scene.setRoute;
+    love = 0;
+  }
+
+  // テキスト
+  const text = typeof scene.text === "function" ? scene.text() : scene.text;
+  document.getElementById("text").innerText = text;
+
+  // 名前
+  document.getElementById("name").innerText = scene.char || "";
+
+  // 画像
+  if(scene.img){
+    document.getElementById("charImg").src = images[scene.img];
+  } else {
+    document.getElementById("charImg").src = "";
+  }
+
+  // 好感度
   document.getElementById("love").innerText = "好感度: " + love;
 
-  const choicesDiv = document.getElementById("choices");
-  choicesDiv.innerHTML = "";
+  speak(text);
+
+  // 選択肢
+  const div = document.getElementById("choices");
+  div.innerHTML = "";
 
   scene.choices.forEach(c=>{
     const btn = document.createElement("button");
     btn.innerText = c.text;
 
     btn.onclick = ()=>{
-      love += c.love || 0;
+      if(c.love) love += c.love;
       showScene(c.next);
     };
 
-    choicesDiv.appendChild(btn);
+    div.appendChild(btn);
   });
 }
 
-// ===== スタート =====
+// スタート
 showScene("start");
 </script>
 
